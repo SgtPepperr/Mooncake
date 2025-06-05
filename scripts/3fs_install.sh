@@ -81,11 +81,16 @@ echo "install libfuse 3.16.1"
 wget https://github.com/libfuse/libfuse/releases/download/fuse-3.16.1/fuse-3.16.1.tar.gz
 tar vzxf fuse-3.16.1.tar.gz
 cd fuse-3.16.1/
-mkdir build; cd build
-apt install meson meson setup .. ninja ; ninja install
+mkdir build ; cd build
+apt install meson 
+meson setup ..
+ninja ; ninja install
+cd ../..
 
 echo "install rust"
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+export RUSTUP_UPDATE_ROOT=https://mirrors.aliyun.com/rustup/rustup
+export RUSTUP_DIST_SERVER=https://mirrors.aliyun.com/rustup
+curl --proto '=https' --tlsv1.2 -sSf https://mirrors.aliyun.com/repo/rust/rustup-init.sh | sh
 
 echo "install foundationdb"
 wget https://github.com/apple/foundationdb/releases/download/7.3.63/foundationdb-clients_7.3.63-1_amd64.deb
@@ -93,6 +98,8 @@ wget https://github.com/apple/foundationdb/releases/download/7.3.63/foundationdb
 dpkg -i foundationdb-clients_7.3.63-1_amd64.deb
 dpkg -i foundationdb-server_7.3.63-1_amd64.deb
 
+# edit max_sge for single node running
+sed -i 's/CONFIG_HOT_UPDATED_ITEM(max_sge, 16u, ConfigCheckers::checkPositive);/CONFIG_HOT_UPDATED_ITEM(max_sge, 1u, ConfigCheckers::checkPositive);/g' ./src/common/net/ib/IBSocket.h
 
 echo "Configuring and Building 3fs..."
 cmake -S . -B build -DCMAKE_CXX_COMPILER=clang++-14 -DCMAKE_C_COMPILER=clang-14 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON

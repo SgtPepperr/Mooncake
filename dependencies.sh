@@ -25,6 +25,9 @@ REPO_ROOT=`pwd`
 GITHUB_PROXY=${GITHUB_PROXY:-"https://github.com"}
 GOVER=1.23.8
 
+INSTALL_3FS=false
+INSTALL_3FS_SCRIPT="./scripts/3fs_install.sh"
+
 # Function to print section headers
 print_section() {
     echo -e "\n${BLUE}=== $1 ===${NC}"
@@ -59,11 +62,15 @@ for arg in "$@"; do
         -y|--yes)
             SKIP_CONFIRM=true
             ;;
+        -3|--3fs)
+            INSTALL_3FS=true
+            ;;
         -h|--help)
             echo -e "${YELLOW}Mooncake Dependencies Installer${NC}"
             echo -e "Usage: ./dependencies.sh [OPTIONS]"
             echo -e "\nOptions:"
             echo -e "  -y, --yes    Skip confirmation and install all dependencies"
+            echo -e "  -3, --3fs    Install 3FS (optional)"
             echo -e "  -h, --help   Show this help message and exit"
             exit 0
             ;;
@@ -78,7 +85,21 @@ echo -e "  - System packages (build tools, libraries)"
 echo -e "  - yalantinglibs"
 echo -e "  - Git submodules"
 echo -e "  - Go $GOVER"
+if [ "$INSTALL_3FS" = false ]; then
+    echo -e "  - ${YELLOW}3FS (RDMA support) [optional]${NC}"
+else
+    echo -e "  - ${GREEN}3FS (RDMA support)${NC}"
+fi
 echo
+
+# 如果未通过 -3 参数指定，则询问用户
+if [ "$INSTALL_3FS" = false ] && [ "$SKIP_CONFIRM" = false ]; then
+    read -p "Do you want to install 3FS (RDMA support)? [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        INSTALL_3FS=true
+    fi
+fi
 
 # Ask for confirmation unless -y flag is used
 if [ "$SKIP_CONFIRM" = false ]; then
@@ -201,6 +222,32 @@ else
     exit 1
 fi
 
+# Install 3fs(optional)
+if [ "$INSTALL_3FS" = true ]; then
+    print_section "Installing 3FS (RDMA support)"
+    
+    # check if script exists
+    if [ ! -f "$INSTALL_3FS_SCRIPT" ]; then
+        print_error "3FS install script not found at $INSTALL_3FS_SCRIPT"
+    fi
+
+    # check if script is executable,if not, add execute permission
+    if [ ! -x "$INSTALL_3FS_SCRIPT" ]; then
+        echo -e "${YELLOW}Adding execute permission to 3FS install script...${NC}"
+        chmod +x "$INSTALL_3FS_SCRIPT"
+        check_success "Failed to add execute permission to $INSTALL_3FS_SCRIPT"
+    fi
+
+    # execute the install script
+    echo -e "${YELLOW}Starting 3FS installation...${NC}"
+    bash "$INSTALL_3FS_SCRIPT"
+    check_success "Failed to install 3FS"
+    
+    print_success "3FS installed successfully"
+else
+    echo -e "${YELLOW}Skipping 3FS installation.${NC}"
+fi
+
 print_section "Installing Go $GOVER"
 
 install_go() {
@@ -252,6 +299,9 @@ echo -e "  ${GREEN}✓${NC} System packages"
 echo -e "  ${GREEN}✓${NC} yalantinglibs"
 echo -e "  ${GREEN}✓${NC} Git submodules"
 echo -e "  ${GREEN}✓${NC} Go $GOVER"
+if [ "$INSTALL_3FS" = true ]; then
+    echo -e "  ${GREEN}✓${NC} 3FS (RDMA support)"
+fi
 echo
 echo -e "You can now build and run Mooncake."
 echo -e "${YELLOW}Note: You may need to restart your terminal or run 'source ~/.bashrc' to use Go.${NC}"
